@@ -1,0 +1,216 @@
+/* ═══════════════════════════════════════════════════════
+   Design Tokens
+═══════════════════════════════════════════════════════ */
+:root {
+  /* Brand */
+  --c-primary:     #4A2C6E;
+  --c-accent:      #7B4FA6;
+  --c-bg:          #F6F4FA;
+  --c-surface:     #FFFFFF;
+  --c-light:       #EDE6F5;
+  --c-ink:         #1C1828;
+  --c-muted:       #7A6E8A;
+  /* Semantic */
+  --c-success:     #1A5C3A;  --c-success-bg: #D1FAE5;
+  --c-warn:        #7A4A00;  --c-warn-bg:    #FEF3C7;
+  --c-error:       #8B1A1A;  --c-error-bg:   #FEE2E2;
+  --c-amber:       #A16207;  --c-amber-bg:   #FEF9C3;
+  /* Competence levels (mirror STUFEN in config.js) */
+  --s1-c: #8B1A1A; --s1-bg: #FEE2E2;
+  --s2-c: #7A4A00; --s2-bg: #FEF3C7;
+  --s3-c: #A16207; --s3-bg: #FEF9C3;
+  --s4-c: #1A5C3A; --s4-bg: #D1FAE5;
+  --s5-c: #4A2C6E; --s5-bg: #EDE6F5;
+  /* Shapes */
+  --r-card:  12px;
+  --r-badge: 999px;
+  --r-btn:   12px;
+  --r-field: 12px;
+  /* Layout */
+  --app-max-w: 440px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Base
+═══════════════════════════════════════════════════════ */
+[x-cloak] { display: none !important; }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  background: var(--c-bg);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--c-ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Layout
+═══════════════════════════════════════════════════════ */
+.app-shell {
+  max-width: var(--app-max-w);
+  margin-inline: auto;
+  min-height: 100vh;
+}
+.has-nav { padding-bottom: 80px; }
+
+/* ═══════════════════════════════════════════════════════
+   Card
+═══════════════════════════════════════════════════════ */
+.card {
+  background: var(--c-surface);
+  border-radius: var(--r-card);
+  padding: 16px;
+}
+.card--tinted  { background: var(--c-light); }
+.card--success { background: var(--c-success-bg); }
+.card--warn    { background: var(--c-warn-bg); }
+.card--error   { background: var(--c-error-bg); }
+.card--accent-left { border-left: 4px solid var(--c-primary); }
+
+/* ═══════════════════════════════════════════════════════
+   Buttons
+═══════════════════════════════════════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border-radius: var(--r-btn); padding: 13px 20px;
+  font-weight: 600; font-size: 15px; font-family: inherit;
+  cursor: pointer; border: none; text-align: center;
+  transition: opacity 0.12s, transform 0.08s;
+  text-decoration: none;
+  -webkit-user-select: none; user-select: none;
+}
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn--block   { width: 100%; }
+.btn--sm      { padding: 7px 12px; font-size: 13px; border-radius: 8px; }
+
+.btn--primary { background: var(--c-primary); color: #fff; }
+.btn--primary:hover:not(:disabled) { opacity: 0.92; }
+
+.btn--outline { background: var(--c-light); color: var(--c-primary); }
+.btn--ghost {
+  background: transparent; color: var(--c-accent);
+  border: 2px dashed var(--c-accent);
+  font-size: 13px; padding: 10px 16px; width: 100%;
+}
+.btn--danger  { background: var(--c-error-bg); color: var(--c-error); }
+.btn--success { background: var(--c-success-bg); color: var(--c-success); }
+
+/* ═══════════════════════════════════════════════════════
+   Badge
+═══════════════════════════════════════════════════════ */
+.badge {
+  display: inline-block; border-radius: var(--r-badge);
+  padding: 2px 10px; font-size: 11px; font-weight: 600;
+}
+.badge--warn { background: var(--c-warn-bg); color: var(--c-warn); }
+
+/* ═══════════════════════════════════════════════════════
+   Form Fields
+═══════════════════════════════════════════════════════ */
+.field {
+  width: 100%; border: 1.5px solid var(--c-light);
+  border-radius: var(--r-field); padding: 11px 14px;
+  font-size: 14px; font-family: inherit; color: var(--c-ink);
+  background: var(--c-surface);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -webkit-appearance: none;
+}
+.field:focus {
+  outline: none; border-color: var(--c-accent);
+  box-shadow: 0 0 0 3px rgba(123,79,166,0.12);
+}
+.field--tinted { background: var(--c-bg); }
+.field-label { font-size: 13px; font-weight: 600; color: var(--c-primary); display: block; margin-bottom: 4px; }
+.field-hint  { font-size: 12px; color: var(--c-muted); margin-top: 4px; }
+
+/* ═══════════════════════════════════════════════════════
+   Progress Bar
+═══════════════════════════════════════════════════════ */
+.progress-bar { height: 7px; background: var(--c-light); border-radius: 999px; overflow: hidden; }
+.progress-bar__fill { height: 100%; border-radius: 999px; transition: width 0.45s ease; }
+
+/* ═══════════════════════════════════════════════════════
+   Bottom Navigation
+═══════════════════════════════════════════════════════ */
+.nav-bar {
+  background: var(--c-surface); border-top: 1px solid var(--c-light);
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: var(--app-max-w); display: flex; z-index: 100;
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 8px 0 10px; font-size: 11px; color: var(--c-muted);
+  cursor: pointer; background: none; border: none; font-family: inherit;
+  transition: color 0.12s;
+}
+.nav-item.is-active { color: var(--c-primary); font-weight: 700; }
+
+/* ═══════════════════════════════════════════════════════
+   Star Rating Buttons
+═══════════════════════════════════════════════════════ */
+.star-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 8px 3px 6px; border-radius: 10px; cursor: pointer;
+  border: 2px solid transparent; background: var(--c-bg); gap: 3px;
+  transition: all 0.12s; font-family: inherit;
+}
+.star-btn:active { transform: scale(0.93); }
+.star-btn__stars { font-size: 10px; line-height: 1; letter-spacing: -.5px; }
+.star-btn__label { font-size: 9px; font-weight: 700; color: var(--c-muted); text-align: center; line-height: 1.2; }
+
+/* Selected states — keyed by data attribute */
+.star-btn[data-stufe="1"].is-selected { background: var(--s1-bg); border-color: var(--s1-c); }
+.star-btn[data-stufe="1"].is-selected .star-btn__label { color: var(--s1-c); }
+.star-btn[data-stufe="2"].is-selected { background: var(--s2-bg); border-color: var(--s2-c); }
+.star-btn[data-stufe="2"].is-selected .star-btn__label { color: var(--s2-c); }
+.star-btn[data-stufe="3"].is-selected { background: var(--s3-bg); border-color: var(--s3-c); }
+.star-btn[data-stufe="3"].is-selected .star-btn__label { color: var(--s3-c); }
+.star-btn[data-stufe="4"].is-selected { background: var(--s4-bg); border-color: var(--s4-c); }
+.star-btn[data-stufe="4"].is-selected .star-btn__label { color: var(--s4-c); }
+.star-btn[data-stufe="5"].is-selected { background: var(--s5-bg); border-color: var(--s5-c); }
+.star-btn[data-stufe="5"].is-selected .star-btn__label { color: var(--s5-c); }
+
+/* ═══════════════════════════════════════════════════════
+   Verification Box
+═══════════════════════════════════════════════════════ */
+.verif-box {
+  background: var(--c-light); border-radius: 10px; padding: 12px;
+  margin-top: 10px; border-left: 3px solid var(--c-accent);
+  animation: slideDown 0.18s ease;
+}
+@keyframes slideDown { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+/* ═══════════════════════════════════════════════════════
+   Hint Box
+═══════════════════════════════════════════════════════ */
+.tipp-box {
+  background: var(--c-light); border-radius: 10px; padding: 12px; margin-top: 8px;
+  animation: slideDown 0.18s ease;
+}
+
+/* ═══════════════════════════════════════════════════════
+   API Status
+═══════════════════════════════════════════════════════ */
+.api-status { border-radius: 10px; padding: 8px 12px; font-size: 13px; margin-top: 8px; }
+.api-status--ok      { background: var(--c-success-bg); color: var(--c-success); }
+.api-status--error   { background: var(--c-error-bg);   color: var(--c-error); }
+.api-status--loading { background: var(--c-light);      color: var(--c-primary); }
+
+/* ═══════════════════════════════════════════════════════
+   Screen header
+═══════════════════════════════════════════════════════ */
+.screen-header { display: flex; align-items: center; gap: 12px; padding-top: 16px; padding-bottom: 12px; }
+.back-btn { font-size: 22px; color: var(--c-muted); background: none; border: none; cursor: pointer; line-height: 1; padding: 0 4px; }
+
+/* ═══════════════════════════════════════════════════════
+   Utility
+═══════════════════════════════════════════════════════ */
+.text-muted   { color: var(--c-muted); }
+.text-primary { color: var(--c-primary); }
+.text-sm      { font-size: 13px; }
+.text-xs      { font-size: 11px; }
+.font-bold    { font-weight: 700; }
+.font-semibold { font-weight: 600; }
