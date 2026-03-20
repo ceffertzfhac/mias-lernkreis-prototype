@@ -33,6 +33,10 @@ function app() {
     // ── Kurs (course = radar axis definition) ────────────────────────────────
     kurs: ACTIVE_KURS,
 
+    // ── Kursinhalt (pre-generated deterministic content) ─────────────────────
+    kursinhalt: null,             // parsed kurs-inhalt.json or null
+    kursinhaltStatus: { ok: null, msg: '' },
+
     // ── Diagnose ────────────────────────────────────────────────────────────
     diagnosen: [],          // [{ datum: ISO, bewertungen: [{id, stufe}] }]
     aktBewertungen: [],     // [{id, stufe: 1-5 | null}]
@@ -45,6 +49,8 @@ function app() {
     ue: {
       themaId: 1, typ: 'erklären', schwierigkeit: 1,
       aufgabe: '', antwort: '', tippTexte: [], genutzeTipps: 0,
+      aufgabeObj: null,     // full item object from kursinhalt (has tipps + musterloesung)
+      musterloesung: '',    // shown after submit in deterministic mode
       ergebnis: null, loading: false,
     },
     session: { aufgaben: [] },
@@ -65,6 +71,14 @@ function app() {
 
       const storedExam = store.get('exam_date')
       this.examDateInput = storedExam ? toDateInput(new Date(storedExam)) : toDateInput(dateFromNow(this.kurs.defaultPrüfungstage))
+
+      // Load pre-generated kursinhalt if stored
+      const ki = store.get('kursinhalt')
+      if (ki?.kurs && ki?.content) {
+        this.kursinhalt = ki
+        this.kurs = ki.kurs
+        this.kursinhaltStatus = { ok: true, msg: `✅ ${ki.kurs.name} (${ki.kurs.themen.length} Themen)` }
+      }
 
       this._resetAktDiagnose()
       if (this.name) {
@@ -125,6 +139,52 @@ function app() {
     },
 
     // ════════════════════════════════════════════════════════════════════════
+    // KURSINHALT — deterministischer Modus
+    // ════════════════════════════════════════════════════════════════════════
+    loadKursinhaltFile(event) {
+      const file = event.target.files[0]
+      if (!file) return
+      this.kursinhaltStatus = { ok: null, msg: 'Lädt…' }
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result)
+          if (!data.kurs || !data.content) throw new Error('Fehlende Felder: kurs oder content')
+          if (!Array.isArray(data.kurs.themen) || !data.kurs.themen.length) throw new Error('Keine Themen gefunden')
+          this.kursinhalt = data
+          this.kurs = data.kurs
+          try {
+            store.set('kursinhalt', data)
+          } catch (_) {
+            // localStorage quota exceeded — keep in memory, warn user
+            this.kursinhaltStatus = { ok: true, msg: `✅ ${data.kurs.name} geladen (nur für diese Sitzung — Datei zu groß für dauerhaften Speicher)` }
+            return
+          }
+          this.kursinhaltStatus = { ok: true, msg: `✅ ${data.kurs.name} — ${data.kurs.themen.length} Themen geladen` }
+          this._resetAktDiagnose()
+        } catch (err) {
+          this.kursinhaltStatus = { ok: false, msg: `❌ Ungültige Datei: ${err.message}` }
+        }
+      }
+      reader.readAsText(file)
+    },
+
+    removeKursinhalt() {
+      this.kursinhalt = null
+      this.kurs = ACTIVE_KURS
+      localStorage.removeItem(STORAGE_PREFIX + 'kursinhalt')
+      this.kursinhaltStatus = { ok: null, msg: '' }
+      this._resetAktDiagnose()
+    },
+
+    // Pick a random item from the pre-generated pool for a given combination
+    _pickFromPool(themaId, typ, schwierigkeit) {
+      const pool = this.kursinhalt?.content?.[themaId]?.aufgaben?.[typ]?.[schwierigkeit] ?? []
+      if (!pool.length) return null
+      return pool[Math.floor(Math.random() * pool.length)]
+    },
+
+    // ════════════════════════════════════════════════════════════════════════
     // DIAGNOSE
     // ════════════════════════════════════════════════════════════════════════
     _resetAktDiagnose() {
@@ -148,12 +208,21 @@ function app() {
     async _startVerifikation(id, stufe) {
       const thema = this.kurs.themen.find(t => t.id === id)
       this.verifikation = { aktiv: true, themaId: id, stufe, frage: '', loading: true }
-      this.verifikation.frage = await callAI(
-        PROMPTS.verifizierung(thema.name, stufe),
-        'Frage generieren.',
-        { apiKey: this.apiKey, model: this.apiModel }
-      )
-      this.verifikation.loading = false
+
+      if (this.kursinhalt) {
+        const pool = this.kursinhalt?.content?.[id]?.verifikation?.[stufe] ?? []
+        this.verifikation.frage = pool.length
+          ? pool[Math.floor(Math.random() * pool.length)]
+          : `Erkläre das Kernprinzip von „${thema.name}" in einem Satz.`
+        this.verifikation.loading = false
+      } else {
+        this.verifikation.frage = await callAI(
+          PROMPTS.verifizierung(thema.name, stufe),
+          'Frage generieren.',
+          { apiKey: this.apiKey, model: this.apiModel }
+        )
+        this.verifikation.loading = false
+      }
     },
 
     confirmVerifikation() { this.verifikation.aktiv = false },
@@ -184,34 +253,86 @@ function app() {
     // ÜBUNG
     // ════════════════════════════════════════════════════════════════════════
     async generateTask() {
-      Object.assign(this.ue, { aufgabe: '', antwort: '', tippTexte: [], genutzeTipps: 0, ergebnis: null, loading: true })
-      const thema = this.kurs.themen.find(t => t.id == this.ue.themaId)
-      this.ue.aufgabe = await callAI(PROMPTS.aufgabe(thema.name, this.ue.typ, this.ue.schwierigkeit), 'Aufgabe.', { apiKey: this.apiKey, model: this.apiModel })
-      this.ue.loading = false
+      Object.assign(this.ue, {
+        aufgabe: '', antwort: '', tippTexte: [], genutzeTipps: 0,
+        ergebnis: null, loading: true, aufgabeObj: null, musterloesung: '',
+      })
+
+      if (this.kursinhalt) {
+        const item = this._pickFromPool(this.ue.themaId, this.ue.typ, this.ue.schwierigkeit)
+        if (item) {
+          this.ue.aufgabe    = item.aufgabe
+          this.ue.aufgabeObj = item
+        } else {
+          this.ue.aufgabe = `Keine Aufgabe für diese Kombination verfügbar. Wähle einen anderen Typ oder Schwierigkeitsgrad.`
+        }
+        this.ue.loading = false
+      } else {
+        const thema = this.kurs.themen.find(t => t.id == this.ue.themaId)
+        this.ue.aufgabe = await callAI(
+          PROMPTS.aufgabe(thema.name, this.ue.typ, this.ue.schwierigkeit),
+          'Aufgabe.',
+          { apiKey: this.apiKey, model: this.apiModel }
+        )
+        this.ue.loading = false
+      }
       this.screen = 'ueben-aufgabe'
     },
 
     async requestHint() {
       if (this.ue.genutzeTipps >= 3 || this.ue.loading) return
-      this.ue.loading = true
-      const hint = await callAI(PROMPTS.tipp(this.ue.aufgabe, this.ue.genutzeTipps + 1), 'Tipp.', { apiKey: this.apiKey, model: this.apiModel })
-      this.ue.tippTexte.push(hint)
-      this.ue.genutzeTipps++
-      this.ue.loading = false
+
+      if (this.kursinhalt && this.ue.aufgabeObj?.tipps) {
+        const tipp = this.ue.aufgabeObj.tipps[this.ue.genutzeTipps] ?? 'Kein weiterer Tipp verfügbar.'
+        this.ue.tippTexte.push(tipp)
+        this.ue.genutzeTipps++
+      } else {
+        this.ue.loading = true
+        const hint = await callAI(
+          PROMPTS.tipp(this.ue.aufgabe, this.ue.genutzeTipps + 1),
+          'Tipp.',
+          { apiKey: this.apiKey, model: this.apiModel }
+        )
+        this.ue.tippTexte.push(hint)
+        this.ue.genutzeTipps++
+        this.ue.loading = false
+      }
     },
 
     async submitAnswer() {
       if (!this.ue.antwort.trim() || this.ue.loading) return
-      this.ue.loading = true
-      const thema = this.kurs.themen.find(t => t.id == this.ue.themaId)
-      this.ue.ergebnis = await callAI(PROMPTS.bewertung(this.ue.aufgabe, this.ue.antwort, thema.name), 'Bewerten.', { apiKey: this.apiKey, model: this.apiModel })
-      this.ue.loading = false
-      const korrekt = this._estimateCorrectness(this.ue.ergebnis)
+
+      if (this.kursinhalt && this.ue.aufgabeObj?.musterloesung) {
+        // Deterministic mode: show model answer, student self-assesses
+        this.ue.musterloesung = this.ue.aufgabeObj.musterloesung
+        this.ue.ergebnis = '__musterloesung__'
+        this.screen = 'ueben-ergebnis'
+      } else {
+        // AI mode: get feedback from LLM
+        this.ue.loading = true
+        const thema = this.kurs.themen.find(t => t.id == this.ue.themaId)
+        this.ue.ergebnis = await callAI(
+          PROMPTS.bewertung(this.ue.aufgabe, this.ue.antwort, thema.name),
+          'Bewerten.',
+          { apiKey: this.apiKey, model: this.apiModel }
+        )
+        this.ue.loading = false
+        const korrekt = this._estimateCorrectness(this.ue.ergebnis)
+        this._applyAdaptivity(korrekt)
+        this.screen = 'ueben-ergebnis'
+      }
+    },
+
+    // Called from HTML when student self-assesses after seeing model answer
+    selfAssess(korrekt) {
+      this._applyAdaptivity(korrekt)
+    },
+
+    _applyAdaptivity(korrekt) {
       const { genutzeTipps } = this.ue
       if (korrekt && genutzeTipps === 0)      this.ue.schwierigkeit = Math.min(3, this.ue.schwierigkeit + 1)
       else if (!korrekt || genutzeTipps >= 2)  this.ue.schwierigkeit = Math.max(1, this.ue.schwierigkeit - 1)
       this.session.aufgaben.push({ korrekt, tipps: genutzeTipps })
-      this.screen = 'ueben-ergebnis'
     },
 
     _estimateCorrectness(fb) {
@@ -220,7 +341,7 @@ function app() {
     },
 
     nextTask() {
-      Object.assign(this.ue, { aufgabe: '', antwort: '', tippTexte: [], genutzeTipps: 0, ergebnis: null })
+      Object.assign(this.ue, { aufgabe: '', antwort: '', tippTexte: [], genutzeTipps: 0, ergebnis: null, aufgabeObj: null, musterloesung: '' })
       this.screen = 'ueben-auswahl'
     },
 
@@ -246,6 +367,8 @@ function app() {
     get bewerteteThemen()  { return this.aktBewertungen.filter(b => b.stufe !== null).length },
     get verbleibeneTage()  { return Math.max(0, Math.ceil((new Date(this.examDateInput) - new Date()) / 86400000)) },
     get zeitProzent()      { return Math.min(100, Math.round((1 - this.verbleibeneTage / 90) * 100)) },
+    get hasDeterministicContent() { return !!this.kursinhalt },
+    get isMusterloesung()  { return this.ue.ergebnis === '__musterloesung__' },
 
     themenBereit() { return this.letzeDiagnose?.bewertungen.filter(b => b.stufe >= 4).length ?? 0 },
 
@@ -288,7 +411,7 @@ function app() {
     fmt:       iso => new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' }),
     examFmt:   () => new Date(this.examDateInput).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' }),
     todayMin:  () => todayInput(),
-    themenName: id => ACTIVE_KURS.themen.find(t => t.id == id)?.name ?? '',
+    themenName: id => this.kurs.themen.find(t => t.id == id)?.name ?? '',
     diffStr:   lvl => '●'.repeat(lvl) + '○'.repeat(3 - lvl),
     kompScore: () => 100 - this.ue.genutzeTipps * 20,
   }

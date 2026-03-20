@@ -615,39 +615,89 @@
 
     <div class="screen-header">
       <button class="back-btn" @click="nextTask()" type="button">←</button>
-      <h2 class="text-base font-bold text-primary">Feedback</h2>
+      <h2 class="text-base font-bold text-primary" x-text="isMusterloesung ? 'Musterlösung' : 'Feedback'"></h2>
     </div>
 
-    <!-- Score card -->
+    <!-- Score card (shown in both modes) -->
     <div
-      class="card text-center py-5"
+      class="card text-center py-4"
       :class="kompScore() >= 80 ? 'card--success' : kompScore() >= 60 ? 'card--warn' : 'card--error'"
     >
-      <div
-        class="text-4xl font-bold"
-        :style="`color: ${kompScore() >= 80 ? 'var(--c-success)' : kompScore() >= 60 ? 'var(--c-warn)' : 'var(--c-error)'}`"
-        x-text="kompScore() + ' Pkt.'"
-      ></div>
-      <div class="text-sm font-semibold mt-1">
-        <span x-show="ue.genutzeTipps === 0">Ohne Tipps gelöst!</span>
+      <div class="text-sm font-semibold">
+        <span x-show="ue.genutzeTipps === 0">Ohne Tipps bearbeitet</span>
         <span x-show="ue.genutzeTipps === 1">1 Tipp genutzt</span>
         <span x-show="ue.genutzeTipps >= 2" x-text="ue.genutzeTipps + ' Tipps genutzt'"></span>
       </div>
     </div>
 
-    <!-- Feedback -->
-    <div class="card card--accent-left space-y-2">
-      <p class="text-xs font-semibold text-primary">KI-Feedback</p>
-      <p class="text-sm leading-relaxed" x-text="ue.ergebnis"></p>
-    </div>
+    <!-- MODE A: Musterlösung (deterministic) -->
+    <template x-if="isMusterloesung">
+      <div class="space-y-4">
 
-    <!-- Original task reminder -->
-    <div class="card space-y-1">
-      <p class="text-xs font-semibold text-muted">Aufgabe</p>
-      <p class="text-sm leading-snug" x-text="ue.aufgabe"></p>
-    </div>
+        <!-- Deine Antwort -->
+        <div class="card space-y-1">
+          <p class="text-xs font-semibold text-muted">Deine Antwort</p>
+          <p class="text-sm leading-relaxed" x-text="ue.antwort"></p>
+        </div>
 
-    <!-- Session counter -->
+        <!-- Musterlösung -->
+        <div class="card card--accent-left space-y-2">
+          <p class="text-xs font-semibold text-primary">Musterlösung</p>
+          <p class="text-sm leading-relaxed" x-text="ue.musterloesung"></p>
+        </div>
+
+        <!-- Selbstbewertung -->
+        <div class="card space-y-3">
+          <p class="text-sm font-semibold text-primary">Wie nah warst du?</p>
+          <div class="flex gap-2">
+            <button
+              class="btn btn--success flex-1"
+              @click="selfAssess(true); nextTask()"
+              type="button"
+            >
+              ✓ Richtig lag
+            </button>
+            <button
+              class="btn btn--danger flex-1"
+              @click="selfAssess(false); nextTask()"
+              type="button"
+            >
+              ✗ Noch nicht sicher
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </template>
+
+    <!-- MODE B: KI-Feedback -->
+    <template x-if="!isMusterloesung">
+      <div class="space-y-4">
+
+        <div class="card card--accent-left space-y-2">
+          <p class="text-xs font-semibold text-primary">KI-Feedback</p>
+          <p class="text-sm leading-relaxed" x-text="ue.ergebnis"></p>
+        </div>
+
+        <!-- Original task reminder -->
+        <div class="card space-y-1">
+          <p class="text-xs font-semibold text-muted">Aufgabe</p>
+          <p class="text-sm leading-snug" x-text="ue.aufgabe"></p>
+        </div>
+
+        <div class="space-y-2 pb-2">
+          <button class="btn btn--primary btn--block" @click="nextTask()" type="button">
+            Nächste Aufgabe →
+          </button>
+          <button class="btn btn--outline btn--block" @click="goTo('home')" type="button">
+            Zur Startseite
+          </button>
+        </div>
+
+      </div>
+    </template>
+
+    <!-- Session counter (both modes) -->
     <div class="card py-3 text-center" x-show="session.aufgaben.length > 0">
       <span class="text-xs text-muted">
         Session: <span class="font-bold text-primary" x-text="session.aufgaben.length"></span> Aufgaben ·
@@ -655,14 +705,6 @@
       </span>
     </div>
 
-    <div class="space-y-2 pb-2">
-      <button class="btn btn--primary btn--block" @click="nextTask()" type="button">
-        Nächste Aufgabe →
-      </button>
-      <button class="btn btn--outline btn--block" @click="goTo('home')" type="button">
-        Zur Startseite
-      </button>
-    </div>
   </div>
 
 
@@ -840,6 +882,47 @@
     <button class="btn btn--primary w-full" @click="saveSettings()" type="button">
       Speichern
     </button>
+
+    <!-- Kursinhalt -->
+    <div class="card space-y-3">
+      <p class="text-sm font-semibold text-primary">Kursinhalt laden</p>
+      <p class="text-xs text-muted">
+        Eine vom Dozenten generierte <code>kurs-inhalt.json</code> macht die App vollständig offline-fähig —
+        alle Aufgaben, Tipps und Musterlösungen sind dann direkt eingebettet, ohne KI-Verbindung.
+      </p>
+
+      <!-- Aktiv geladener Kurs -->
+      <div
+        x-show="hasDeterministicContent"
+        class="flex items-center justify-between px-3 py-2 rounded-lg"
+        style="background: var(--c-success-bg); color: var(--c-success);"
+      >
+        <span class="text-sm font-semibold" x-text="kursinhaltStatus.msg"></span>
+        <button
+          class="btn btn--sm btn--danger"
+          @click="removeKursinhalt()"
+          type="button"
+        >Entfernen</button>
+      </div>
+
+      <!-- Upload -->
+      <div x-show="!hasDeterministicContent">
+        <label class="label">JSON-Datei auswählen</label>
+        <input
+          type="file"
+          accept=".json,application/json"
+          class="field text-sm"
+          @change="loadKursinhaltFile($event)"
+        />
+      </div>
+
+      <div
+        x-show="kursinhaltStatus.msg && !hasDeterministicContent"
+        class="text-xs px-3 py-2 rounded-lg"
+        :class="kursinhaltStatus.ok === false ? 'bg-red-50 text-red-800' : 'bg-blue-50 text-blue-800'"
+        x-text="kursinhaltStatus.msg"
+      ></div>
+    </div>
 
   </div>
 
