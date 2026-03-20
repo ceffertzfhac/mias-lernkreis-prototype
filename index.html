@@ -776,6 +776,66 @@
 
 
   <!-- ═══════════════════════════════════════════════════════════════════════
+       SCREEN: EINSTELLUNGEN
+  ════════════════════════════════════════════════════════════════════════ -->
+  <div x-show="screen === 'einstellungen'" class="has-nav px-4 space-y-4">
+
+    <div class="screen-header">
+      <h1 class="screen-title">Einstellungen</h1>
+    </div>
+
+    <!-- API-Konfiguration -->
+    <div class="card space-y-3">
+      <p class="text-sm font-semibold text-primary">KI-Verbindung</p>
+
+      <div>
+        <label class="label" for="settingsApiKey">API Key</label>
+        <input
+          id="settingsApiKey"
+          type="password"
+          class="field"
+          placeholder="Bearer Token (KI Connect NRW)"
+          x-model="apiKey"
+        />
+      </div>
+
+      <div>
+        <label class="label" for="settingsApiModel">Modell</label>
+        <input
+          id="settingsApiModel"
+          type="text"
+          class="field"
+          placeholder="gpt-5.2"
+          x-model="apiModel"
+        />
+      </div>
+
+      <button
+        class="btn btn--outline btn--sm"
+        @click="testApiConnection()"
+        :disabled="!apiKey || apiTest.status === 'loading'"
+        type="button"
+      >
+        <span x-show="apiTest.status !== 'loading'">Verbindung testen</span>
+        <span x-show="apiTest.status === 'loading'">Teste…</span>
+      </button>
+
+      <div
+        x-show="apiTest.message"
+        class="text-xs px-3 py-2 rounded-lg"
+        :class="apiTest.status === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'"
+        x-text="apiTest.message"
+      ></div>
+    </div>
+
+    <button class="btn btn--primary w-full" @click="saveSettings()" type="button">
+      Speichern
+    </button>
+
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
        BOTTOM NAVIGATION
        Only shown on screens that are NOT setup
   ════════════════════════════════════════════════════════════════════════ -->
@@ -819,6 +879,16 @@
     >
       <span class="text-lg mb-0.5">📊</span>
       <span>Fortschritt</span>
+    </button>
+
+    <button
+      class="nav-item"
+      :class="{ 'is-active': screen === 'einstellungen' }"
+      @click="goTo('einstellungen')"
+      type="button"
+    >
+      <span class="text-lg mb-0.5">⚙️</span>
+      <span>API</span>
     </button>
 
   </nav>

@@ -119,6 +119,11 @@ function app() {
       this.goTo('home')
     },
 
+    saveSettings() {
+      store.set('api_config', { apiKey: this.apiKey, model: this.apiModel })
+      this.goTo('home')
+    },
+
     // ════════════════════════════════════════════════════════════════════════
     // DIAGNOSE
     // ════════════════════════════════════════════════════════════════════════
