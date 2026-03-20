@@ -76,14 +76,22 @@ function getMockResponse(type, extra) {
 
 // ─── Environment detection ────────────────────────────────────────────────────
 // file:// protocol → browser blocks all fetch() to external APIs (hard CORS rule).
-// http://127.0.0.1 (VS Code Live Server) → real HTTP origin, request goes through.
+// 127.0.0.1 / localhost → API server rejects (no CORS headers for local origins).
+// Public origin (github.io, netlify.app, …) → should work fine.
 function _isFileProtocol() {
   return location.protocol === 'file:'
+}
+function _isLocalhost() {
+  return ['localhost', '127.0.0.1', '::1'].includes(location.hostname)
 }
 
 const FILE_CORS_HINT =
   'Direktes Öffnen als Datei (file://) blockiert alle API-Anfragen. ' +
   'Lösung: In VS Code unten rechts "Go Live" klicken → Seite über http://127.0.0.1:5500 öffnen.'
+
+const LOCALHOST_CORS_HINT =
+  'Die API blockiert Anfragen von localhost. Für lokale Tests: Demo-Modus nutzen (kein Key nötig). ' +
+  'Für echte KI: Seite über GitHub Pages oder Netlify aufrufen.'
 
 // ─── API Calls ────────────────────────────────────────────────────────────────
 async function callAI(systemPrompt, userMessage, { apiKey, model } = {}) {
@@ -102,7 +110,7 @@ async function callAI(systemPrompt, userMessage, { apiKey, model } = {}) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: model ?? 'gpt-4o',
+        model: model ?? 'gpt-5.2',
         messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }],
         max_tokens: 800, temperature: 0.7,
       }),
@@ -121,27 +129,21 @@ async function testConnection(apiKey, model) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: model ?? 'gpt-4o',
+        model: model ?? 'gpt-5.2',
         messages: [{ role: 'user', content: 'Antworte nur mit: OK' }],
         max_tokens: 10,
       }),
     })
     const data = await res.json()
     if (data.choices?.[0]?.message?.content) {
-      return { ok: true, message: `✅ Verbunden · Modell: ${model ?? 'gpt-4o'}` }
+      return { ok: true, message: `✅ Verbunden · Modell: ${model ?? 'gpt-5.2'}` }
     }
     // HTTP error with JSON body (e.g. 401 Unauthorized)
     const errMsg = data.error?.message ?? `HTTP ${res.status}`
     return { ok: false, message: `API-Fehler: ${errMsg}` }
   } catch (e) {
-    // file:// protocol → hard browser block, give actionable hint
-    if (_isFileProtocol()) {
-      return { ok: false, message: FILE_CORS_HINT }
-    }
-    // TypeError = CORS rejected by API server (no Access-Control-Allow-Origin header)
-    if (e instanceof TypeError) {
-      return { ok: false, message: 'API erlaubt keine Anfragen von localhost. Für lokale Tests: Demo-Modus nutzen (kein Key nötig). Für echte KI: Prototyp auf einem öffentlichen Webserver bereitstellen.' }
-    }
+    if (_isFileProtocol()) return { ok: false, message: FILE_CORS_HINT }
+    if (_isLocalhost())    return { ok: false, message: LOCALHOST_CORS_HINT }
     return { ok: false, message: `Netzwerkfehler: ${e.message}` }
   }
 }
