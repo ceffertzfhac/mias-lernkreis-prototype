@@ -56,6 +56,17 @@ body {
 .has-nav { padding-bottom: 80px; }
 
 /* ═══════════════════════════════════════════════════════
+   Home Grid (mobile: stacked, desktop: 2-col)
+═══════════════════════════════════════════════════════ */
+.home-grid { display: flex; flex-direction: column; gap: 16px; }
+.home-radar-canvas { max-height: 220px; }
+
+/* ═══════════════════════════════════════════════════════
+   Diagnose Themen Grid (mobile: stacked, desktop: 2-col)
+═══════════════════════════════════════════════════════ */
+.themen-grid { display: flex; flex-direction: column; gap: 12px; }
+
+/* ═══════════════════════════════════════════════════════
    Card
 ═══════════════════════════════════════════════════════ */
 .card {
@@ -214,3 +225,67 @@ body {
 .text-xs      { font-size: 11px; }
 .font-bold    { font-weight: 700; }
 .font-semibold { font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════════
+   Responsive — Tablet / Laptop (≥ 768px)
+   Nav moves from bottom to left sidebar.
+   Content gets wider, key screens use 2-col layouts.
+═══════════════════════════════════════════════════════ */
+@media (min-width: 768px) {
+
+  /* Sidebar nav */
+  .nav-bar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0; right: auto;
+    width: 80px; height: 100vh;
+    border-top: none; border-right: 1px solid var(--c-light);
+    flex-direction: column;
+    transform: none;
+    max-width: 80px;
+    padding: 28px 0 20px;
+    justify-content: flex-start;
+    gap: 2px;
+  }
+  .nav-item {
+    padding: 12px 0;
+    font-size: 10px;
+    width: 100%;
+  }
+
+  /* Content area: offset by sidebar width */
+  .has-nav {
+    padding-bottom: 24px;
+    padding-left: calc(80px + 32px);
+    padding-right: 32px;
+    max-width: 1120px;
+  }
+
+  /* Setup screen: centered, wider */
+  .setup-screen {
+    max-width: 560px;
+    margin-inline: auto;
+    padding-top: 48px;
+  }
+
+  /* Home: radar left, info right */
+  .home-grid {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .home-grid__radar { flex: 1 1 40%; }
+  .home-grid__info  { flex: 1 1 55%; }
+  .home-radar-canvas { max-height: 300px; }
+
+  /* Diagnose: 2-col topic grid */
+  .themen-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* Radar canvas: allow more height */
+  #radarCanvas, #radarFortschritt {
+    max-height: 480px;
+  }
+}

@@ -48,7 +48,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════════
        SCREEN: SETUP
   ════════════════════════════════════════════════════════════════════════ -->
-  <div x-show="screen === 'setup'" class="px-4 py-8 space-y-6">
+  <div x-show="screen === 'setup'" class="setup-screen px-4 py-8 space-y-6">
 
     <!-- Header -->
     <div class="text-center space-y-1 pt-4">
@@ -200,59 +200,68 @@
       </div>
     </div>
 
-    <!-- Mini radar -->
-    <div class="card" x-show="diagnosen.length > 0">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-sm font-semibold text-primary">Lernstand-Radar</span>
-        <button class="btn btn--sm btn--outline" @click="goTo('radar')" type="button">Details</button>
-      </div>
-      <div style="max-height: 220px;">
-        <canvas id="radarHome"></canvas>
-      </div>
-    </div>
+    <!-- Home grid: radar left, info right on desktop -->
+    <div class="home-grid">
 
-    <!-- Status summary -->
-    <div class="card space-y-2" x-show="letzeDiagnose">
-      <p class="text-sm font-semibold text-primary mb-1">Lernstand auf einen Blick</p>
-      <div class="flex gap-3">
-        <div class="flex-1 card--tinted rounded-xl p-3 text-center">
-          <div class="text-2xl font-bold text-primary" x-text="themenBereit()"></div>
-          <div class="text-xs text-muted">Themen klausurbereit</div>
+      <!-- Left: Mini radar -->
+      <div class="card home-grid__radar" x-show="diagnosen.length > 0">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-semibold text-primary">Lernstand-Radar</span>
+          <button class="btn btn--sm btn--outline" @click="goTo('radar')" type="button">Details</button>
         </div>
-        <div class="flex-1 card--tinted rounded-xl p-3 text-center">
-          <div class="text-2xl font-bold" style="color: var(--c-warn)" x-text="kurs.themen.length - themenBereit()"></div>
-          <div class="text-xs text-muted">Themen noch offen</div>
+        <div class="home-radar-canvas">
+          <canvas id="radarHome"></canvas>
         </div>
       </div>
-    </div>
 
-    <!-- Schwächste Themen -->
-    <div class="card space-y-2" x-show="schwächsteThemen().length > 0">
-      <p class="text-sm font-semibold text-primary mb-1">Fokus jetzt</p>
-      <template x-for="t in schwächsteThemen()" :key="t.id">
-        <div class="flex items-center gap-3 py-1">
-          <span
-            class="badge"
-            :style="`background: ${stufenCfg(t.stufe).bg}; color: ${stufenCfg(t.stufe).color};`"
-            x-text="starStr(t.stufe)"
-          ></span>
-          <span class="text-sm" x-text="t.name"></span>
+      <!-- Right: Status + Focus + CTAs -->
+      <div class="home-grid__info space-y-3">
+
+        <!-- Status summary -->
+        <div class="card space-y-2" x-show="letzeDiagnose">
+          <p class="text-sm font-semibold text-primary mb-1">Lernstand auf einen Blick</p>
+          <div class="flex gap-3">
+            <div class="flex-1 card--tinted rounded-xl p-3 text-center">
+              <div class="text-2xl font-bold text-primary" x-text="themenBereit()"></div>
+              <div class="text-xs text-muted">Themen klausurbereit</div>
+            </div>
+            <div class="flex-1 card--tinted rounded-xl p-3 text-center">
+              <div class="text-2xl font-bold" style="color: var(--c-warn)" x-text="kurs.themen.length - themenBereit()"></div>
+              <div class="text-xs text-muted">Themen noch offen</div>
+            </div>
+          </div>
         </div>
-      </template>
-    </div>
 
-    <!-- CTA buttons -->
-    <div class="space-y-2 pb-2">
-      <button class="btn btn--primary btn--block" @click="goTo('diagnose')" type="button">
-        Selbstdiagnose starten
-      </button>
-      <button class="btn btn--outline btn--block" @click="goTo('ueben-auswahl')" type="button">
-        Übungsaufgabe lösen
-      </button>
-      <div x-show="diagnosen.length === 0" class="card--warn rounded-xl p-3 text-sm" style="color: var(--c-warn);">
-        Starte mit der Selbstdiagnose, um deinen Lernradar zu aktivieren.
-      </div>
-    </div>
+        <!-- Schwächste Themen -->
+        <div class="card space-y-2" x-show="schwächsteThemen().length > 0">
+          <p class="text-sm font-semibold text-primary mb-1">Fokus jetzt</p>
+          <template x-for="t in schwächsteThemen()" :key="t.id">
+            <div class="flex items-center gap-3 py-1">
+              <span
+                class="badge"
+                :style="`background: ${stufenCfg(t.stufe).bg}; color: ${stufenCfg(t.stufe).color};`"
+                x-text="starStr(t.stufe)"
+              ></span>
+              <span class="text-sm" x-text="t.name"></span>
+            </div>
+          </template>
+        </div>
+
+        <!-- CTA buttons -->
+        <div class="space-y-2 pb-2">
+          <button class="btn btn--primary btn--block" @click="goTo('diagnose')" type="button">
+            Selbstdiagnose starten
+          </button>
+          <button class="btn btn--outline btn--block" @click="goTo('ueben-auswahl')" type="button">
+            Übungsaufgabe lösen
+          </button>
+          <div x-show="diagnosen.length === 0" class="card--warn rounded-xl p-3 text-sm" style="color: var(--c-warn);">
+            Starte mit der Selbstdiagnose, um deinen Lernradar zu aktivieren.
+          </div>
+        </div>
+
+      </div><!-- /home-grid__info -->
+    </div><!-- /home-grid -->
   </div>
 
 
@@ -291,7 +300,7 @@
     </div>
 
     <!-- Topic list -->
-    <div class="space-y-3">
+    <div class="themen-grid">
       <template x-for="t in kurs.themen" :key="t.id">
         <div class="card space-y-2">
           <div class="flex items-start justify-between gap-2">
